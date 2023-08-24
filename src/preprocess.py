@@ -24,6 +24,9 @@ def extract_floor(floor_info: str) -> int:
         floor_info (str): 층수 정보
     """
     # TODO
+    floor_str = floor_info.split(" ")[0]
+
+    return int(floor_str) if floor_str.isnumeric() else 0
 
 
 def floor_extractor(df: pd.DataFrame, col: str) -> pd.DataFrame:
@@ -46,17 +49,32 @@ def floor_extractor(df: pd.DataFrame, col: str) -> pd.DataFrame:
 # 1. 방의 크기는 제곱근을 적용함 (FunctionTransformer 사용)
 # 2. 층수는 실제 층수를 추출하되 숫자가 아닌 Basement 등은 0층으로 표기함
 # 3. 범주형 변수(CAT_FEATURES)는 타겟 인코딩 적용 (from category_encoders import TargetEncoder)
-preprocess_pipeline = ColumnTransformer(
+
+# 사이킷런 의 인터페이스가 fit, transform 구조를 요구함!
+preprocess_pipeline = ColumnTransformer(  # 각 컬럼에 만든 transformer들을 적용하는 클래스
+    # 인자로 transformers를 받으며, 각 transfomer를 tuple 같이 ()안에 받음
     transformers=[
-        # TODO,
+        (
+            "sqrt_transformer",
+            FunctionTransformer(np.sqrt),
+            ["size"],  # 여기서는 왜 kw_args를 안 받지?? 안해도 되나? 그럼 밑에선 왜 해야하지??
+        ),
         (
             "floor_extractor",
-            FunctionTransformer(floor_extractor, kw_args={"col": "floor"}),
-            ["floor"],
+            FunctionTransformer(
+                floor_extractor, kw_args={"col": "floor"}
+            ),  # args로 받을 것
+            ["floor"],  # 실제로 적용할 컬럼명
         ),
-        # TODO,
+        (
+            "target_encoder",
+            TargetEncoder(),  # 이 안에 fit과 transform이 있음
+            CAT_FEATURES,
+        ),
     ],
-    remainder="passthrough",
-    verbose_feature_names_out=False,
+    remainder="passthrough",  # 위에서 변형안한 변수도 남겨라 (안하면 모두 버림)
+    verbose_feature_names_out=False,  # transformer되면서 컬럼명에 더럽게 붙여서 나오는거 하지마! 원래 컬럼명 그대로 나와!
 )
-preprocess_pipeline.set_output(transform="pandas")
+preprocess_pipeline.set_output(
+    transform="pandas"
+)  # output이 numpy array로 나와서 데이터 볼 수 있게 pandas로 바꾸기 (사이킷런이 numpy array로 뱉음)
