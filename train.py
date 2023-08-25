@@ -25,21 +25,25 @@ from src.preprocess import preprocess_pipeline
 
 # 로그 들어갈 위치
 # 로그를 정해진 로그 경로에 logs.log로 저장하도록 설정
+logger = set_logger(os.path.join(LOG_FILEPATH, "logs.log"))
 
-sys.excepthook = handle_exception
+sys.excepthook = handle_exception  # error에 대한 traceback을 제공함
 warnings.filterwarnings(action="ignore")
 
 
 if __name__ == "__main__":
+    logger.info("Loading data...")
     train_df = pd.read_csv(os.path.join(DATA_PATH, "house_rent_train.csv"))
 
     _X = train_df.drop(["rent", "area_locality", "posted_on"], axis=1)
     y = np.log1p(train_df["rent"])
 
     # save preprocess pipelined X=_X, y=y to X
+    logger.info("Applying a pipeline...")
     X = preprocess_pipeline.fit_transform(X=_X, y=y)
 
     # Data storage - 피처 데이터 저장
+    logger.info("Saving feature data...")
     if not os.path.exists(os.path.join(DATA_PATH, "storage")):
         os.makedirs(os.path.join(DATA_PATH, "storage"))
     X.assign(rent=y).to_csv(
@@ -66,6 +70,7 @@ if __name__ == "__main__":
     # mlruns/ is added to '.gitignore' file
     # -> to prevent git from tracking mlruns files (redundantly uploades every experiments to git)
 
+    logger.debug("Using mlflow to track an experiment...")  # info 로 해도 무방
     for i, params in enumerate(param_set):
         run_name = f"Run {i}"
         with mlflow.start_run(run_name=f"Run {i}"):
@@ -92,6 +97,7 @@ if __name__ == "__main__":
                     "RMSE_CV": score_cv.mean()  # save score_cv.mean() as "RMSE_CV"
                 }
             )
+            logger.info(f"RMSE CV for Run {i} : {score_cv.mean()}")
 
             # 로깅 정보 : 학습 loss
             for s in regr.train_score_:
@@ -123,6 +129,7 @@ if __name__ == "__main__":
 
     best_run = mlflow.get_run(best_run_df.at[0, "run_id"])
     best_params = best_run.data.params
+    logger.info(f"Best hyper-parameter : {best_params}")
 
     best_model_uri = f"{best_run.info.artifact_uri}/model"
 
