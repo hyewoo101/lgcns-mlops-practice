@@ -12,7 +12,9 @@ from sklearn.ensemble import GradientBoostingRegressor
 
 from .constants import ARTIFACT_PATH, LOG_FILEPATH
 
-RICH_FORMAT = "| %(filename)s:%(lineno)s\t| %(message)s"
+RICH_FORMAT = (
+    "| %(filename)s:%(lineno)s\t| %(message)s"  # string handler format
+)
 FILE_HANDLER_FORMAT = (
     "[%(asctime)s]\t%(levelname)s\t | %(filename)s:%(lineno)s\t| %(message)s"
 )
@@ -21,7 +23,7 @@ FILE_HANDLER_FORMAT = (
 def get_file_handler(
     log_path: str = LOG_FILEPATH,
 ) -> logging.handlers.TimedRotatingFileHandler:
-    """로그 저장 파일 핸드러를 설정하는 함수
+    """로그 저장 파일 핸들러를 설정하는 함수
 
     Args:
         log_path (str, optional): 로그 저장 파일명. Defaults to LOG_FILEPATH.
@@ -29,14 +31,21 @@ def get_file_handler(
     Returns:
         logging.handlers.TimedRotatingFileHandler: 로그 저장 파일 핸들러 객체
     """
-    file_handler = logging.handlers.TimedRotatingFileHandler(
-        log_path, when="midnight", interval=1, backupCount=30, encoding="utf-8"
+    file_handler = logging.handlers.TimedRotatingFileHandler(  # 보통, FileHandler 함수를 씀
+        # 특정 기간만 로그를 남겨주는 함수 : TimeRotaingFileHandler
+        log_path,
+        when="midnight",
+        interval=1,
+        backupCount=30,
+        encoding="utf-8",  # backupCount=30 : keeps only 30 days of log
     )
     file_handler.suffix = "logs-%Y%m%d"
-    # TODO: 파일 핸들러의 기본 수준을 INFO로 설정
-    
-    # TODO: 파일 핸들러의 포맷을 FILE_HANDLER_FORMAT으로 설정
-    
+    # set default level of file handler to 'INFO'
+    file_handler.setLevel(logging.INFO)
+
+    # set format of file handler as FILE_HANDLER_FORMAT
+    file_handler.setFormatter(logging.Formatter(FILE_HANDLER_FORMAT))
+
     return file_handler
 
 
@@ -56,11 +65,13 @@ def set_logger(log_path: str = LOG_FILEPATH) -> logging.Logger:
     )
 
     logger = logging.getLogger("rich")
-    
-    # TODO: 로거의 기본 수준을 DEBUG 설정
-    
-    # TODO: 기본 로거에 위에서 만든 파일 핸들러를 추가
-    
+
+    # set default level of file handler to 'DEBUG'
+    logger.setLevel(logging.DEBUG)
+
+    # add above defined file handler to default logger(string logger)
+    logger.addHandler(get_file_handler(log_path))
+
     return logger
 
 
